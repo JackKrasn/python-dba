@@ -18,7 +18,11 @@ class SSH(paramiko.SSHClient):
     def run(self, command):
         stdin, stdout, stderr = self.exec_command(command, get_pty=True)
         for line in iter(stdout.readline, ""):
-            print(line.rstrip())
+            #log_adapter.info(line.rstrip())
+            last_line = line.rstrip()
+            log_adapter.info(line.rstrip())
+
+        return last_line
 
     def put_all(self, localpath, remotepath):
         """
