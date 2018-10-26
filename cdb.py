@@ -4,19 +4,15 @@ from oracledb import db, dblogger, orautils
 import logging
 import argparse
 import os
+import utils
+import config
 
-
-BASE_DIR = os.path.dirname(os.path.realpath(__file__))
-SQL_DIR = os.path.join(BASE_DIR, 'sql')
-TPL_DIR = os.path.join(BASE_DIR, 'templates')
+# BASE_DIR = os.path.dirname(os.path.realpath(__file__))
+# SQL_DIR = os.path.join(BASE_DIR, 'sql')
+# TPL_DIR = os.path.join(BASE_DIR, 'templates')
 
 logger = logging.getLogger('oracledb.cdb')
 log_adapter = dblogger.DBLoggerAdapter(logger)
-
-def get_sql(sql_dir, filename):
-    with open(os.path.join(sql_dir, filename)) as f:
-        return tuple(s.strip() for s in f.read().rstrip().rstrip(';').split(';'))
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='create oracle database')
@@ -87,8 +83,8 @@ if __name__ == '__main__':
         import remote
         client = remote.SSH(hostname=args.host, username='oracle')
         # копирование всех скриптов
-        client.put_all(BASE_DIR, '/tmp')
-        DIRNAME = os.path.split(BASE_DIR)[1]
+        client.put_all(config.BASE_DIR, '/tmp')
+        DIRNAME = os.path.split(config.BASE_DIR)[1]
         client.run('. /u/dba/venv/python_dba/bin/activate; python /tmp/'
                  + DIRNAME + '/cdb.py -s ' + args.sid + ' -v ' + str(args.ver)
                  + ' -o ' + args.oradata + ' -n ' + args.nls_characterset + cdb + archive_mode + ' -l ' + args.logging)
@@ -104,11 +100,11 @@ if __name__ == '__main__':
         db1.create_from_tpl(args.sid, oradata, nls=args.nls_characterset, archive_mode=args.archive_mode, cdb=args.cdb)
         if args.type == 'cft':
             log_adapter.info('create tablespaces for cft platform')
-            for sql in get_sql(SQL_DIR, 'create_tablespaces.sql'):
+            for sql in utils.get_sql(config.SQL_DIR, 'create_tablespaces.sql'):
                 db1.cur().ddl_execute(sql)
 
             log_adapter.info('create user ibs, add grants to ibs')
-            cmd = '{}/bin/sqlplus -S / as sysdba @{}/init_ibs_schema.sql'.format(db1.oracle_home, SQL_DIR)
+            cmd = '{}/bin/sqlplus -S / as sysdba @{}/init_ibs_schema.sql'.format(db1.oracle_home, config.SQL_DIR)
             db1._run_cmd(cmd, stdoutDisable=True)
 
             # change system options

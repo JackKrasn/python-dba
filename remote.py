@@ -16,13 +16,15 @@ class SSH(paramiko.SSHClient):
         log_adapter.info('connected to host %s', hostname)
 
     def run(self, command):
+        last_line = None
         stdin, stdout, stderr = self.exec_command(command, get_pty=True)
         for line in iter(stdout.readline, ""):
             #log_adapter.info(line.rstrip())
             last_line = line.rstrip()
-            log_adapter.info(line.rstrip())
+            # log_adapter.info(line.rstrip())
 
-        return last_line
+        if last_line:
+            return last_line
 
     def put_all(self, localpath, remotepath):
         """
@@ -31,18 +33,30 @@ class SSH(paramiko.SSHClient):
         :param remotepath: удаленное расположение родительской директории. В данной директории будет создана
         директория, как в localpath
         """
-        log_adapter.info('copy directory from %s to %s', localpath, remotepath )
-        self.ftp = self.open_sftp()
+        # log_adapter.info('copy directory from %s to %s', localpath, remotepath)
+        sftp = self.open_sftp()
         remotepath = remotepath.replace('\\', '/') # при копировании из Windows на linux, приходится править пути
         #  recursively upload a full directory
         os.chdir(os.path.split(localpath)[0])
         parent = os.path.split(localpath)[1]
         for walker in os.walk(parent):
             try:
-                self.ftp.mkdir(os.path.join(remotepath, walker[0]).replace('\\', '/'))
+                sftp.mkdir(os.path.join(remotepath, walker[0]).replace('\\', '/'))
             except:
                 pass
             for file in walker[2]:
-                self.ftp.put(os.path.join(walker[0], file).replace('\\', '/'),
-                         os.path.join(remotepath, walker[0], file).replace('\\', '/'))
+                sftp.put(os.path.join(walker[0], file).replace('\\', '/'),
+                        os.path.join(remotepath, walker[0], file).replace('\\', '/'))
+        sftp.close()
 
+    def put_file(self, localfile, remotefile):
+        """
+        Скопировать один файл
+        :param localfile: абсолюдный путь к файлу
+        :param remotepath: путь на удаленном хосте
+        :return:
+        """
+        log_adapter.info('copy file %s to %s', localfile, remotefile)
+        sftp = self.open_sftp()
+        sftp.put(localfile, remotefile)
+        sftp.close()
